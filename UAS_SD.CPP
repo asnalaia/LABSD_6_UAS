@@ -4,6 +4,9 @@
 #include <unordered_map>
 #include <sstream>
 #include <algorithm>
+#include <climits>
+#include <iomanip>
+#define V 10
 
 using namespace std;
 
@@ -15,6 +18,19 @@ struct Produk {
 };
 
 unordered_map<int, Produk> produkMap;
+
+int graph[V][V] = {
+        {0, 0, 7, 4, 0, 0, 4, 0, 5, 0}, 
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 
+        {0, 5, 0, 0, 0, 0, 0, 0, 0, 0}, 
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 
+        {0, 0, 0, 0, 0, 0, 0, 7, 0, 0},
+        {0, 0, 0, 0, 9, 0, 0, 8, 0, 3},
+        {0, 4, 0, 0, 2, 11, 0, 0, 0, 0}, 
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 10, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 4, 0, 0}
+};
 
 string formatRupiah(double harga) {
     stringstream ss;
@@ -45,7 +61,7 @@ vector<Produk> daftarProduk = {
     {20, "Teh Kotak Sosro 500ml", "Konsumsi", 7500}
 };
 
-int keranjangBelanja[21] = {0}; // Array untuk menyimpan jumlah per ID
+int keranjangBelanja[21] = {0}; 
 
 void tampilkanHeader() {
     cout << "+-----+------------------------------------------+-------------------+----------------+\n";
@@ -132,7 +148,6 @@ void hapusDariKeranjang(int idProduk) {
     }
 }
 
-
 void cariProdukByID() {
     int id;
     cout << "\nMasukkan ID produk yang ingin dicari: ";
@@ -145,6 +160,87 @@ void cariProdukByID() {
         cout << "\nProduk dengan ID " << id << " tidak ditemukan.\n";
     }
 }
+
+int minDistance(int dist[], bool sptSet[]) {
+    int min = INT_MAX, min_index;
+    for (int v = 0; v < V; v++) {
+        if (!sptSet[v] && dist[v] <= min) {
+            min = dist[v];
+            min_index = v;
+        }
+    }
+    return min_index;
+}
+
+void dijkstra(int graph[V][V], int src, int dist[], bool sptSet[]) {
+    for (int i = 0; i < V; i++) {
+        dist[i] = INT_MAX;
+        sptSet[i] = false;
+    }
+    dist[src] = 0;
+
+    for (int count = 0; count < V - 1; count++) {
+        int u = minDistance(dist, sptSet);
+        sptSet[u] = true;
+
+        for (int v = 0; v < V; v++) {
+            if (!sptSet[v] && graph[u][v] != 0 && dist[u] != INT_MAX && dist[u] + graph[u][v] < dist[v]) {
+                dist[v] = dist[u] + graph[u][v];
+            }
+        }
+    }
+}
+
+void hitungBiayaPengiriman(int dist[], int biayaPerKm) {
+    std::cout << "\nBiaya Pengiriman (Per Kilometer Rp " << biayaPerKm << "):\n";
+    for (int i = 0; i < V; i++) {
+        if (dist[i] == INT_MAX) {
+            std::cout << "Ke vertex " << i << ": Tidak dapat dijangkau\n";
+        } else {
+            int biaya = dist[i] * biayaPerKm;
+            std::cout << "Ke vertex " << i << ": " << dist[i] << " km, Biaya: Rp " << biaya << "\n";
+        }
+    }
+}
+
+void menuPengiriman(int graph[V][V]) {
+    int pilihan, tujuan;
+    int dist[V];
+    bool sptSet[V];
+
+    do {
+        std::cout << "\n=== MENU PENGIRIMAN ===\n";
+        std::cout << "1. Hitung Biaya Pengiriman\n";
+        std::cout << "2. Kembali ke Menu Utama\n";
+        std::cout << "Pilih opsi (1-2): ";
+        std::cin >> pilihan;
+
+        switch (pilihan) {
+            case 1:
+                std::cout << "Masukkan titik tujuan (0-9): ";
+                std::cin >> tujuan;
+
+                dijkstra(graph, 0, dist, sptSet);
+
+                if (dist[tujuan] == INT_MAX) {
+                    std::cout << "Titik tujuan tidak dapat dijangkau.\n";
+                } else {
+                    int biaya = dist[tujuan] * 3000;
+                    std::cout << "Jarak terpendek dari 0 ke " << tujuan << ": " << dist[tujuan] << " km\n";
+                    std::cout << "Biaya Pengiriman: Rp " << biaya << "\n";
+                }
+                break;
+
+            case 2:
+                std::cout << "Kembali ke Menu Utama.\n";
+                break;
+
+            default:
+                std::cout << "Pilihan tidak valid. Silakan coba lagi.\n";
+        }
+    } while (pilihan != 2);
+}
+
 void menu() {
     int pilihan;
     do {
@@ -156,8 +252,9 @@ void menu() {
         cout << "5. Tampilkan Keranjang Belanja\n";
         cout << "6. Cari Produk Berdasarkan ID\n";
         cout << "7. Hapus Produk dari Keranjang\n";
-        cout << "8. Keluar\n";
-        cout << "Pilih opsi (1-8): ";
+        cout << "8. Hitung Biaya Pengiriman\n";
+        cout << "9. Keluar\n";
+        cout << "Pilih opsi (1-9): ";
         cin >> pilihan;
 
         switch (pilihan) {
@@ -211,20 +308,22 @@ void menu() {
             hapusDariKeranjang(idProduk);
             break;
         }
-        case 8:
-            cout << "\nTerima kasih telah menggunakan aplikasi. Selamat berbelanja!\n";
+        case 8: 
+            menuPengiriman(graph);
+            break;
+        case 9:
+            cout << "\nTerima kasih telah berbelanja di Toko TIGASETENGAH. Sampai jumpa lagi!\n";
             break;
         default:
             cout << "\nPilihan tidak valid. Silakan coba lagi.\n";
         }
-    } while (pilihan != 8);
+    } while (pilihan != 9);
 }
 
 int main() {
     for (const auto& p : daftarProduk) {
         produkMap[p.id] = p;
     }
-
     menu();
     return 0;
 }
