@@ -17,6 +17,17 @@ struct Produk {
     double harga;
 };
 
+struct RiwayatPembayaran {
+    double totalBelanja;
+    double ongkir;
+    double totalBayar;
+};
+
+const int MAX_RIWAYAT = 100;
+RiwayatPembayaran riwayat[MAX_RIWAYAT];
+int jumlahRiwayat = 0;
+
+
 unordered_map<int, Produk> produkMap;
 
 int graph[V][V] = {
@@ -241,6 +252,64 @@ void menuPengiriman(int graph[V][V]) {
     } while (pilihan != 2);
 }
 
+void pembayaran(double totalHarga) {
+    if (totalHarga == 0) {
+        cout << "\nKeranjang Anda kosong. Silakan tambahkan produk sebelum melakukan pembayaran.\n";
+        return;
+    }
+
+    int tujuan;
+    cout << "\nMasukkan titik tujuan pengiriman (0-9): ";
+    cin >> tujuan;
+
+    int dist[V];
+    bool sptSet[V];
+    dijkstra(graph, 0, dist, sptSet);
+
+    if (dist[tujuan] == INT_MAX) {
+        cout << "Titik tujuan tidak dapat dijangkau. Pembayaran dibatalkan.\n";
+        return;
+    }
+
+    double ongkir = dist[tujuan] * 3000;
+    double totalBayar = totalHarga + ongkir;
+
+    if (jumlahRiwayat < MAX_RIWAYAT) {
+        riwayat[jumlahRiwayat++] = {totalHarga, ongkir, totalBayar};
+        cout << "\nPembayaran berhasil!\n";
+        cout << "Total Belanja: " << formatRupiah(totalHarga) << "\n";
+        cout << "Biaya Pengiriman: " << formatRupiah(ongkir) << "\n";
+        cout << "Total yang Harus Dibayar: " << formatRupiah(totalBayar) << "\n";
+
+        fill(begin(keranjangBelanja), end(keranjangBelanja), 0);
+    } else {
+        cout << "\nRiwayat pembayaran penuh. Tidak dapat menyimpan pembayaran baru.\n";
+    }
+}
+
+
+void tampilkanRiwayat() {
+    if (jumlahRiwayat == 0) {
+        cout << "\nBelum ada riwayat pembayaran.\n";
+        return;
+    }
+
+    cout << "\n=== RIWAYAT PEMBAYARAN ===\n";
+    cout << "+-----+----------------+----------------+----------------+\n";
+    cout << "| No  | Total Belanja  |     Ongkir     |  Total Bayar   |\n";
+    cout << "+-----+----------------+----------------+----------------+\n";
+
+    for (int i = 0; i < jumlahRiwayat; ++i) {
+        cout << "| " << setw(3) << i + 1 << " | "
+             << right << setw(14) << formatRupiah(riwayat[i].totalBelanja) << " | "
+             << setw(14) << formatRupiah(riwayat[i].ongkir) << " | "
+             << setw(14) << formatRupiah(riwayat[i].totalBayar) << " |\n";
+    }
+
+    cout << "+-----+----------------+----------------+----------------+\n";
+}
+
+
 void menu() {
     int pilihan;
     do {
@@ -253,8 +322,10 @@ void menu() {
         cout << "6. Cari Produk Berdasarkan ID\n";
         cout << "7. Hapus Produk dari Keranjang\n";
         cout << "8. Hitung Biaya Pengiriman\n";
-        cout << "9. Keluar\n";
-        cout << "Pilih opsi (1-9): ";
+        cout << "9. Lakukan Pembayaran\n";
+        cout << "10. Tampilkan Riwayat Pembayaran\n";
+        cout << "11. Keluar\n";
+        cout << "Pilih opsi (1-11): ";
         cin >> pilihan;
 
         switch (pilihan) {
@@ -311,15 +382,27 @@ void menu() {
         case 8: 
             menuPengiriman(graph);
             break;
-        case 9:
-            cout << "\nTerima kasih telah berbelanja di Toko TIGASETENGAH. Sampai jumpa lagi!\n";
-            break;
-        default:
-            cout << "\nPilihan tidak valid. Silakan coba lagi.\n";
+            case 9: {
+                double totalHarga = 0;
+                for (int id = 1; id <= 20; ++id) {
+                    if (keranjangBelanja[id] > 0) {
+                        totalHarga += keranjangBelanja[id] * produkMap[id].harga;
+                    }
+                }
+                pembayaran(totalHarga);
+                break;
+            }
+            case 10:
+                tampilkanRiwayat();
+                break;
+            case 11:
+                cout << "\nTerima kasih telah berbelanja di Toko TIGASETENGAH. Sampai jumpa lagi!\n";
+                break;
+            default:
+                cout << "\nPilihan tidak valid. Silakan coba lagi.\n";
         }
-    } while (pilihan != 9);
+    } while (pilihan != 11);
 }
-
 int main() {
     for (const auto& p : daftarProduk) {
         produkMap[p.id] = p;
