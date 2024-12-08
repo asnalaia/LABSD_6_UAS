@@ -1,412 +1,249 @@
 #include <iostream>
+#include <fstream>
+#include <string>
+#include <ctime>
 #include <iomanip>
 #include <vector>
-#include <unordered_map>
-#include <sstream>
-#include <algorithm>
-#include <climits>
-#include <iomanip>
-#define V 10
-
 using namespace std;
 
-struct Produk {
-    int id;
-    string nama;
-    string kategori;
-    double harga;
-};
-
-struct RiwayatPembayaran {
-    double totalBelanja;
-    double ongkir;
-    double totalBayar;
-};
-
-const int MAX_RIWAYAT = 100;
-RiwayatPembayaran riwayat[MAX_RIWAYAT];
-int jumlahRiwayat = 0;
-
-
-unordered_map<int, Produk> produkMap;
-
-int graph[V][V] = {
-        {0, 0, 7, 4, 0, 0, 4, 0, 5, 0}, 
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 
-        {0, 5, 0, 0, 0, 0, 0, 0, 0, 0}, 
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 
-        {0, 0, 0, 0, 0, 0, 0, 7, 0, 0},
-        {0, 0, 0, 0, 9, 0, 0, 8, 0, 3},
-        {0, 4, 0, 0, 2, 11, 0, 0, 0, 0}, 
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 10, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 4, 0, 0}
-};
-
-string formatRupiah(double harga) {
-    stringstream ss;
-    ss << "Rp " << fixed << setprecision(0) << harga;
-    return ss.str();
-}
-
-vector<Produk> daftarProduk = {
-    {1, "Smartphone Samsung Galaxy S23", "Elektronik", 12000000},
-    {2, "Laptop ASUS ROG Zephyrus G14", "Elektronik", 25000000},
-    {3, "TV LED LG 43 Inch", "Elektronik", 6500000},
-    {4, "Earbuds Apple AirPods Pro", "Elektronik", 3500000},
-    {5, "Kamera DSLR Canon EOS 90D", "Elektronik", 17000000},
-    {6, "Sepeda MTB Polygon", "Fitness", 5000000},
-    {7, "Dumbbell 5kg", "Fitness", 200000},
-    {8, "Matras Yoga", "Fitness", 250000},
-    {9, "Mesin Elliptical", "Fitness", 7500000},
-    {10, "Resistance Band", "Fitness", 100000},
-    {11, "Serum Wajah Vitamin C", "Kecantikan", 150000},
-    {12, "Masker Wajah Aloe Vera", "Kecantikan", 75000},
-    {13, "Lipstik Matte L'Oréal", "Kecantikan", 120000},
-    {14, "Parfum Chanel", "Kecantikan", 2500000},
-    {15, "Sabun Cuci Muka Himalaya", "Kecantikan", 35000},
-    {16, "Roti Tawar Serba Roti", "Konsumsi", 15000},
-    {17, "Kopi Arabica 100g", "Konsumsi", 50000},
-    {18, "Mie Instan", "Konsumsi", 5000},
-    {19, "Susu UHT Indomilk 1 Liter", "Konsumsi", 18000},
-    {20, "Teh Kotak Sosro 500ml", "Konsumsi", 7500}
-};
-
-int keranjangBelanja[21] = {0}; 
-
-void tampilkanHeader() {
-    cout << "+-----+------------------------------------------+-------------------+----------------+\n";
-    cout << "| ID  |                Nama Produk               |     Kategori      |     Harga      |\n";
-    cout << "+-----+------------------------------------------+-------------------+----------------+\n";
-}
-
-void tampilkanProduk(const vector<Produk>& produk) {
-    tampilkanHeader();
-    for (const auto& p : produk) {
-        cout << "| " << setw(3) << p.id << " | "
-             << left << setw(40) << p.nama << " | "
-             << left << setw(17) << p.kategori << " | "
-             << right << setw(14) << formatRupiah(p.harga) << " |\n";
+void printLine(char ch = '=', int length = 50) {
+    for (int i = 0; i < length; i++) {
+        cout << ch;
     }
-    cout << "+-----+------------------------------------------+-------------------+----------------+\n";
+    cout << endl;
 }
 
-void sortirHarga(vector<Produk>& produk, bool ascending) {
-    sort(produk.begin(), produk.end(), [ascending](const Produk& a, const Produk& b) {
-        return ascending ? a.harga < b.harga : a.harga > b.harga;
-    });
+void printHeader() {
+    printLine('*', 50);
+    cout << "*        SELAMAT DATANG DI TOKO (GO GURL)        *" << endl;
+    printLine('*', 50);
+    cout << endl;
 }
 
-vector<Produk> filterKategori(const string& kategori) {
-    vector<Produk> hasil;
-    for (const auto& p : daftarProduk) {
-        if (p.kategori == kategori) {
-            hasil.push_back(p);
-        }
-    }
-    return hasil;
+void displayMenu() {
+    printLine('-', 50);
+    cout << "                  MASUK KE MENU" << endl;
+    printLine('-', 50);
+    cout << "| 1 | Pilih kategori belanja                  |" << endl;
+    cout << "| 2 | List belanja                            |" << endl;
+    cout << "| 3 | Pembayaran                              |" << endl;
+    cout << "| 0 | Exit                                    |" << endl;
+    printLine('-', 50);
 }
 
-void tambahKeKeranjang(int idProduk) {
-    if (idProduk < 1 || idProduk > 20) {
-        cout << "\nProduk dengan ID " << idProduk << " tidak ditemukan.\n";
-        return;
-    }
-    keranjangBelanja[idProduk]++;
-    cout << "\nProduk \"" << produkMap[idProduk].nama << "\" berhasil ditambahkan ke keranjang.\n";
+
+string getCurrentTime() {
+    time_t now = time(0);
+    tm *localTime = localtime(&now);
+    char buffer[100];
+    strftime(buffer, sizeof(buffer), "%H:%M:%S pada %d/%m/%Y", localTime);
+    return string(buffer);
 }
 
-void tampilkanKeranjang() {
-    bool keranjangKosong = true;
-    double totalHarga = 0;
+string getFilename(const string& nama) {
+    time_t now = time(0);
+    tm *localTime = localtime(&now);
+    char buffer[50];
+    strftime(buffer, sizeof(buffer), "%Y%m%d_%H%M%S", localTime);
+    return nama + "_" + buffer + ".txt";
+}
 
-    cout << "\nIsi keranjang belanja Anda:\n";
-    cout << "+-----+------------------------------------------+------------+----------------+\n";
-    cout << "| ID  |                Nama Produk               |   Jumlah   |     Subtotal   |\n";
-    cout << "+-----+------------------------------------------+------------+----------------+\n";
-
-    for (int id = 1; id <= 20; ++id) {
-        if (keranjangBelanja[id] > 0) {
-            keranjangKosong = false;
-            double subtotal = keranjangBelanja[id] * produkMap[id].harga;
-            totalHarga += subtotal;
-
-            cout << "| " << setw(3) << id << " | "
-                 << left << setw(40) << produkMap[id].nama << " | "
-                 << setw(10) << keranjangBelanja[id] << " | "
-                 << right << setw(14) << formatRupiah(subtotal) << " |\n";
-        }
-    }
-
-    if (keranjangKosong) {
-        cout << "\nKeranjang belanja kosong.\n";
+void saveReceipt(const string& nama, double amount) {
+    string filename = getFilename(nama);
+    ofstream file(filename);
+    if (file.is_open()) {
+        file << "===========================\n";
+        file << "       STRUK PEMBAYARAN\n";
+        file << "===========================\n";
+        file << "Nama Pelanggan: " << nama << endl;
+        file << "Jumlah Pembayaran: Rp" << fixed << setprecision(2) << amount << endl;
+        file << "Waktu Pembayaran: " << getCurrentTime() << endl;
+        file << "===========================\n";
+        file << "   Terima kasih telah\n";
+        file << "   berbelanja di Toko (GO GURL)!\n";
+        file << "===========================\n";
+        file.close();
+        cout << "Struk pembayaran berhasil disimpan sebagai '" << filename << "'\n";
     } else {
-        cout << "+-----+------------------------------------------+------------+----------------+\n";
-        cout << "Total Harga: " << formatRupiah(totalHarga) << "\n";
+        cout << "Gagal menyimpan struk pembayaran.\n";
     }
 }
 
-void hapusDariKeranjang(int idProduk) {
-    if (idProduk < 1 || idProduk > 20) {
-        cout << "\nProduk dengan ID " << idProduk << " tidak ditemukan.\n";
-        return;
-    }
-    if (keranjangBelanja[idProduk] == 0) {
-        cout << "\nProduk \"" << produkMap[idProduk].nama << "\" tidak ada di keranjang.\n";
-    } else {
-        keranjangBelanja[idProduk]--;
-        cout << "\nProduk \"" << produkMap[idProduk].nama << "\" berhasil dihapus dari keranjang.\n";
-    }
+void paymentMenu(const string& nama) {
+    double amount;
+    cout << "=== Menu Pembayaran ===\n";
+    cout << "Pembayaran atas nama: " << nama << endl;
+    cout << "Masukkan jumlah pembayaran: ";
+    cin >> amount;
+
+    cout << "\nMemproses pembayaran...\n";
+    cout << "Pembayaran untuk " << nama << " sebesar Rp" << fixed << setprecision(2) << amount
+         << " berhasil.\n";
+    cout << "Waktu Pembayaran: " << getCurrentTime() << endl;
+
+    saveReceipt(nama, amount);
 }
 
-void cariProdukByID() {
-    int id;
-    cout << "\nMasukkan ID produk yang ingin dicari: ";
-    cin >> id;
+void printFarewell(const string& nama) {
+    int totalWidth = 50;
+    int nameLength = nama.length();
+    int padding = totalWidth - 2 - 14 - nameLength;
+    int leftPadding = padding / 2;
+    int rightPadding = padding - leftPadding;
 
-    if (produkMap.find(id) != produkMap.end()) {
-        cout << "\nProduk ditemukan:\n";
-        tampilkanProduk({produkMap[id]});
-    } else {
-        cout << "\nProduk dengan ID " << id << " tidak ditemukan.\n";
-    }
+    printLine('*', totalWidth);
+    cout << "*" << string(leftPadding, ' ') << "SAMPAI JUMPA, " << nama << string(rightPadding, ' ') << "*" << endl;
+    printLine('*', totalWidth);
 }
 
-int minDistance(int dist[], bool sptSet[]) {
-    int min = INT_MAX, min_index;
-    for (int v = 0; v < V; v++) {
-        if (!sptSet[v] && dist[v] <= min) {
-            min = dist[v];
-            min_index = v;
-        }
-    }
-    return min_index;
+
+void displayCategoryMenu() {
+    printLine('-', 50);
+    cout << "             PILIH KATEGORI BELANJA" << endl;
+    printLine('-', 50);
+    cout << "| 1 | Konsumsi                              |" << endl;
+    cout << "| 2 | Elektronik                            |" << endl;
+    cout << "| 3 | Kecantikan                            |" << endl;
+    cout << "| 4 | Olahraga                              |" << endl;
+    cout << "| 5 | Mainan                                |" << endl;
+    cout << "| 0 | Kembali ke menu utama                 |" << endl;
+    printLine('-', 50);
 }
 
-void dijkstra(int graph[V][V], int src, int dist[], bool sptSet[]) {
-    for (int i = 0; i < V; i++) {
-        dist[i] = INT_MAX;
-        sptSet[i] = false;
+void displayItems(const string& category, const vector<string>& items) {
+    cout << "List barang " << category << ":" << endl;
+    for (size_t i = 0; i < items.size(); ++i) {
+        cout << i + 1 << ". " << items[i] << endl;
     }
-    dist[src] = 0;
-
-    for (int count = 0; count < V - 1; count++) {
-        int u = minDistance(dist, sptSet);
-        sptSet[u] = true;
-
-        for (int v = 0; v < V; v++) {
-            if (!sptSet[v] && graph[u][v] != 0 && dist[u] != INT_MAX && dist[u] + graph[u][v] < dist[v]) {
-                dist[v] = dist[u] + graph[u][v];
-            }
-        }
-    }
+    cout << "0. Kembali ke menu kategori" << endl;
 }
 
-void hitungBiayaPengiriman(int dist[], int biayaPerKm) {
-    std::cout << "\nBiaya Pengiriman (Per Kilometer Rp " << biayaPerKm << "):\n";
-    for (int i = 0; i < V; i++) {
-        if (dist[i] == INT_MAX) {
-            std::cout << "Ke vertex " << i << ": Tidak dapat dijangkau\n";
-        } else {
-            int biaya = dist[i] * biayaPerKm;
-            std::cout << "Ke vertex " << i << ": " << dist[i] << " km, Biaya: Rp " << biaya << "\n";
-        }
-    }
-}
-
-void menuPengiriman(int graph[V][V]) {
-    int pilihan, tujuan;
-    int dist[V];
-    bool sptSet[V];
-
+void categoryMenu() {
+    int categoryChoice;
     do {
-        std::cout << "\n=== MENU PENGIRIMAN ===\n";
-        std::cout << "1. Hitung Biaya Pengiriman\n";
-        std::cout << "2. Kembali ke Menu Utama\n";
-        std::cout << "Pilih opsi (1-2): ";
-        std::cin >> pilihan;
+        displayCategoryMenu();
+        cout << "Pilih kategori [0-5]: ";
+        cin >> categoryChoice;
+        cin.ignore();
 
-        switch (pilihan) {
+        vector<string> items;
+        string category;
+
+        switch (categoryChoice) {
             case 1:
-                std::cout << "Masukkan titik tujuan (0-9): ";
-                std::cin >> tujuan;
-
-                dijkstra(graph, 0, dist, sptSet);
-
-                if (dist[tujuan] == INT_MAX) {
-                    std::cout << "Titik tujuan tidak dapat dijangkau.\n";
-                } else {
-                    int biaya = dist[tujuan] * 3000;
-                    std::cout << "Jarak terpendek dari 0 ke " << tujuan << ": " << dist[tujuan] << " km\n";
-                    std::cout << "Biaya Pengiriman: Rp " << biaya << "\n";
-                }
+                category = "Konsumsi";
+                items = {
+                    "Beras - Rp50,000", "Mi Instan - Rp3,000", "Minyak Goreng - Rp20,000", "Telur - Rp25,000",
+                    "Gula - Rp15,000", "Kopi - Rp10,000", "Teh - Rp8,000", "Roti - Rp12,000",
+                    "Cokelat - Rp18,000", "Susu - Rp22,000", "Buah Apel - Rp30,000", "Jeruk - Rp28,000",
+                    "Daging Sapi - Rp120,000", "Ikan - Rp45,000", "Sayur Bayam - Rp5,000"
+                };
                 break;
-
             case 2:
-                std::cout << "Kembali ke Menu Utama.\n";
+                category = "Elektronik";
+                items = {
+                    "Smartphone - Rp2,500,000", "Laptop - Rp7,500,000", "Tablet - Rp3,200,000", "Televisi - Rp4,000,000",
+                    "Kipas Angin - Rp250,000", "AC - Rp3,000,000", "Kulkas - Rp2,800,000", "Mesin Cuci - Rp2,500,000",
+                    "Setrika - Rp300,000", "Speaker - Rp1,000,000", "Headphone - Rp800,000", "Mouse - Rp150,000",
+                    "Keyboard - Rp350,000", "Power Bank - Rp500,000", "Charger - Rp200,000"
+                };
                 break;
-
+            case 3:
+                category = "Kecantikan";
+                items = {
+                    "Lipstik - Rp100,000", "Bedak - Rp85,000", "Maskara - Rp120,000", "Foundation - Rp150,000",
+                    "Parfum - Rp300,000", "Pelembap - Rp90,000", "Serum Wajah - Rp200,000", "Sabun Muka - Rp75,000",
+                    "Shampoo - Rp50,000", "Conditioner - Rp55,000", "Lulur - Rp40,000", "Masker Rambut - Rp60,000",
+                    "Cat Kuku - Rp25,000", "Sunblock - Rp70,000", "Toner - Rp80,000"
+                };
+                break;
+            case 4:
+                category = "Olahraga";
+                items = {
+                    "Sepatu Lari - Rp500,000", "Bola Sepak - Rp250,000", "Raket Badminton - Rp300,000", "Pakaian Olahraga - Rp150,000",
+                    "Topi - Rp50,000", "Jersey - Rp120,000", "Matras Yoga - Rp200,000", "Kettlebell - Rp400,000",
+                    "Treadmill - Rp5,000,000", "Sepeda - Rp2,000,000", "Dumbbell - Rp350,000", "Skipping Rope - Rp100,000",
+                    "Pelindung Lutut - Rp75,000", "Sarung Tangan Gym - Rp80,000", "Botol Minum - Rp30,000"
+                };
+                break;
+            case 5:
+                category = "Mainan";
+                items = {
+                    "Boneka - Rp50,000", "Mobil-mobilan - Rp40,000", "Lego - Rp500,000", "Puzzle - Rp150,000",
+                    "Drone - Rp1,200,000", "Robot - Rp800,000", "Mainan Kayu - Rp100,000", "Kereta Api Mini - Rp250,000",
+                    "Sepeda Anak - Rp700,000", "Alat Musik Anak - Rp300,000", "Balok Bangunan - Rp200,000", "Mainan Edukasi - Rp150,000",
+                    "Game Konsol - Rp3,500,000", "Mainan Air - Rp60,000", "Mainan Pasir - Rp50,000"
+                };
+                break;
+            case 0:
+                cout << "Kembali ke menu utama..." << endl;
+                return;
             default:
-                std::cout << "Pilihan tidak valid. Silakan coba lagi.\n";
+                cout << "Pilihan tidak valid. Silakan coba lagi!" << endl;
+                continue;
         }
-    } while (pilihan != 2);
-}
 
-void pembayaran(double totalHarga) {
-    if (totalHarga == 0) {
-        cout << "\nKeranjang Anda kosong. Silakan tambahkan produk sebelum melakukan pembayaran.\n";
-        return;
-    }
+        int itemChoice;
+        char addMore;
+        do {
+            displayItems(category, items);
+            cout << "Pilih barang [0-" << items.size() << "]: ";
+            cin >> itemChoice;
 
-    int tujuan;
-    cout << "\nMasukkan titik tujuan pengiriman (0-9): ";
-    cin >> tujuan;
+            if (itemChoice > 0 && itemChoice <= items.size()) {
+                cout << "-> Anda memilih: " << items[itemChoice - 1] << endl;
+                cout << "Ada tambahan (y/t)?: ";
+                cin >> addMore;
+                if (addMore == 't' || addMore == 'T') {
+                    cout << "Kembali ke menu kategori..." << endl;
+                    break;
+                }
+            } else if (itemChoice == 0) {
+                cout << "Kembali ke menu kategori..." << endl;
+            } else {
+                cout << "Pilihan tidak valid. Silakan coba lagi!" << endl;
+            }
+        } while (itemChoice != 0);
 
-    int dist[V];
-    bool sptSet[V];
-    dijkstra(graph, 0, dist, sptSet);
-
-    if (dist[tujuan] == INT_MAX) {
-        cout << "Titik tujuan tidak dapat dijangkau. Pembayaran dibatalkan.\n";
-        return;
-    }
-
-    double ongkir = dist[tujuan] * 3000;
-    double totalBayar = totalHarga + ongkir;
-
-    if (jumlahRiwayat < MAX_RIWAYAT) {
-        riwayat[jumlahRiwayat++] = {totalHarga, ongkir, totalBayar};
-        cout << "\nPembayaran berhasil!\n";
-        cout << "Total Belanja: " << formatRupiah(totalHarga) << "\n";
-        cout << "Biaya Pengiriman: " << formatRupiah(ongkir) << "\n";
-        cout << "Total yang Harus Dibayar: " << formatRupiah(totalBayar) << "\n";
-
-        fill(begin(keranjangBelanja), end(keranjangBelanja), 0);
-    } else {
-        cout << "\nRiwayat pembayaran penuh. Tidak dapat menyimpan pembayaran baru.\n";
-    }
+    } while (true);
 }
 
 
-void tampilkanRiwayat() {
-    if (jumlahRiwayat == 0) {
-        cout << "\nBelum ada riwayat pembayaran.\n";
-        return;
-    }
-
-    cout << "\n=== RIWAYAT PEMBAYARAN ===\n";
-    cout << "+-----+----------------+----------------+----------------+\n";
-    cout << "| No  | Total Belanja  |     Ongkir     |  Total Bayar   |\n";
-    cout << "+-----+----------------+----------------+----------------+\n";
-
-    for (int i = 0; i < jumlahRiwayat; ++i) {
-        cout << "| " << setw(3) << i + 1 << " | "
-             << right << setw(14) << formatRupiah(riwayat[i].totalBelanja) << " | "
-             << setw(14) << formatRupiah(riwayat[i].ongkir) << " | "
-             << setw(14) << formatRupiah(riwayat[i].totalBayar) << " |\n";
-    }
-
-    cout << "+-----+----------------+----------------+----------------+\n";
-}
-
-
-void menu() {
+int main() {
+    string nama;
     int pilihan;
+
+    printHeader();
+    cout << "Masukkan nama Anda: ";
+    cin.ignore();
+    getline(cin, nama);
+    cout << endl;
+    cout << "Halo, " << nama << "! Selamat berbelanja di Toko (GO GURL)!" << endl;
+
     do {
-        cout << "\n=== SELAMAT DATANG DI TOKO TIGASETENGAH! ===\n";
-        cout << "1. Tampilkan Semua Produk\n";
-        cout << "2. Sortir Produk Berdasarkan Harga\n";
-        cout << "3. Filter Produk Berdasarkan Kategori\n";
-        cout << "4. Tambahkan Produk ke Keranjang\n";
-        cout << "5. Tampilkan Keranjang Belanja\n";
-        cout << "6. Cari Produk Berdasarkan ID\n";
-        cout << "7. Hapus Produk dari Keranjang\n";
-        cout << "8. Hitung Biaya Pengiriman\n";
-        cout << "9. Lakukan Pembayaran\n";
-        cout << "10. Tampilkan Riwayat Pembayaran\n";
-        cout << "11. Keluar\n";
-        cout << "Pilih opsi (1-11): ";
+        displayMenu();
+        cout << "Pilih menu [0-3]: ";
         cin >> pilihan;
 
         switch (pilihan) {
-        case 1:
-            cout << "\nDaftar Produk yang Tersedia di Toko TIGASETENGAH:\n";
-            tampilkanProduk(daftarProduk);
-            break;
-        case 2: {
-            int urut;
-            cout << "\nPilih urutan harga:\n";
-            cout << "1. Termurah ke Termahal\n";
-            cout << "2. Termahal ke Termurah\n";
-            cout << "Pilih opsi (1-2): ";
-            cin >> urut;
-            sortirHarga(daftarProduk, urut == 1);
-            cout << "\nDaftar Produk Setelah Disortir:\n";
-            tampilkanProduk(daftarProduk);
-            break;
-        }
-        case 3: {
-            string kategori;
-            cout << "\nMasukkan kategori (Elektronik, Fitness, Kecantikan, Konsumsi, dll.): ";
-            cin >> kategori;
-            vector<Produk> hasil = filterKategori(kategori);
-            if (hasil.empty()) {
-                cout << "\nTidak ada produk dalam kategori \"" << kategori << "\".\n";
-            } else {
-                cout << "\nDaftar Produk Kategori \"" << kategori << "\":\n";
-                tampilkanProduk(hasil);
-            }
-            break;
-        }
-        case 4: {
-            int idProduk;
-            cout << "\nMasukkan ID produk untuk ditambahkan ke keranjang: ";
-            cin >> idProduk;
-            tambahKeKeranjang(idProduk);
-            break;
-        }
-        case 5:
-            tampilkanKeranjang();
-            break;
-
-        case 6:
-            cariProdukByID();
-            break;
-        case 7: {
-            int idProduk;
-            cout << "\nMasukkan ID produk untuk dihapus dari keranjang: ";
-            cin >> idProduk;
-            hapusDariKeranjang(idProduk);
-            break;
-        }
-        case 8: 
-            menuPengiriman(graph);
-            break;
-            case 9: {
-                double totalHarga = 0;
-                for (int id = 1; id <= 20; ++id) {
-                    if (keranjangBelanja[id] > 0) {
-                        totalHarga += keranjangBelanja[id] * produkMap[id].harga;
-                    }
-                }
-                pembayaran(totalHarga);
+            case 1:
+                categoryMenu();
                 break;
-            }
-            case 10:
-                tampilkanRiwayat();
+            case 2:
+                cout << "-> Anda memilih 'List belanja'.\n   (Fitur masih dalam pengembangan)" << endl;
                 break;
-            case 11:
-                cout << "\nTerima kasih telah berbelanja di Toko TIGASETENGAH. Sampai jumpa lagi!\n";
+            case 3:
+                paymentMenu(nama);
+                break;
+            case 0:
+                cout << "-> Terima kasih telah berbelanja di Toko (GO GURL), " << nama << "!" << endl;
                 break;
             default:
-                cout << "\nPilihan tidak valid. Silakan coba lagi.\n";
+                cout << "-> Pilihan tidak valid. Silakan coba lagi!" << endl;
         }
-    } while (pilihan != 11);
-}
-int main() {
-    for (const auto& p : daftarProduk) {
-        produkMap[p.id] = p;
-    }
-    menu();
+    } while (pilihan != 0);
+
+    printFarewell(nama);
+
     return 0;
 }
