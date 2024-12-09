@@ -215,7 +215,6 @@ int main() {
 
     printHeader();
     cout << "Masukkan nama Anda: ";
-    cin.ignore();
     getline(cin, nama);
     cout << endl;
     cout << "Halo, " << nama << "! Selamat berbelanja di Toko (GO GURL)!" << endl;
